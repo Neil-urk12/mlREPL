@@ -22,11 +22,9 @@ while true; do
             exec python3
             ;;
         2)
-            read -p "Enter Go code: " code
-            temp_file="temp_$$.go"
-            echo "$code" > "$temp_file"
-            go run "$temp_file" 2>/dev/null || echo "Error: Invalid Go code"
-            rm "$temp_file"
+            echo "Booting up Go...HERE WE GO! (Ctrl + D to exit or type exit)"
+            echo ""
+            exec gore
             ;;
         3)
             read -p "Enter Rust code: " code
@@ -36,14 +34,12 @@ while true; do
             rm "$temp_file" temp 2>/dev/null
             ;;
         4)
-            read -p "Enter JavaScript code: " code
-            temp_file="temp_$$.js"
-            echo "$code" > "$temp_file"
-            node "$temp_file" 2>/dev/null || echo "Error: Invalid JavaScript code"
-            rm "$temp_file" temp 2>/dev/null
+            echo "I'm gonna JavaScript on your back! (Ctrl + D to exit or type exit)"
+            echo ""
+            exec node
             ;;
         5)
-            echo "Exiting..."
+            echo "Exiting...\nCiao!"
             break
             ;;
         *)
