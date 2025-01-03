@@ -14,11 +14,13 @@ import (
 
 // REPL represents the REPL environment.
 type REPL struct {
-	scanner   *bufio.Scanner // Scanner for reading user input.
-	buffer    []string       // Buffer to store multi-line input.
-	functions []string       // Store function declarations.
-	types     []string       // Store type declarations.
-	vars      []string       // Store variable declarations.
+	scanner   *bufio.Scanner
+	buffer    []string
+	functions []string
+	types     []string
+	pkgVars   []string // Package-level variables
+	localVars []string // Function-level variables
+	lastExpr  string
 }
 
 // NewREPL creates and initializes a new REPL instance.
@@ -28,7 +30,8 @@ func NewREPL() *REPL {
 		buffer:    make([]string, 0),
 		functions: make([]string, 0),
 		types:     make([]string, 0),
-		vars:      make([]string, 0),
+		pkgVars:   make([]string, 0),
+		localVars: make([]string, 0),
 	}
 }
 
@@ -82,27 +85,38 @@ func isCompleteInput(input string) bool {
 		return false
 	}
 
-	// Check for complete blocks
+	// Count braces and parentheses
 	openBraces := strings.Count(input, "{")
 	closeBraces := strings.Count(input, "}")
-	
-	// Check for incomplete struct literals
-	lines := strings.Split(input, "\n")
-	lastLine := strings.TrimSpace(lines[len(lines)-1])
-	
-	// If last line doesn't have a comma and we're in a struct literal
-	if openBraces > closeBraces && !strings.HasSuffix(lastLine, ",") && 
-	   !strings.HasSuffix(lastLine, "{") && lastLine != "" {
-		return false
+	openParens := strings.Count(input, "(")
+	closeParens := strings.Count(input, ")")
+
+	// Handle control structures
+	if strings.HasPrefix(input, "if ") || strings.HasPrefix(input, "for ") {
+		return openBraces == closeBraces
 	}
 
-	// If it's a simple expression or statement without braces
-	if openBraces == 0 && !strings.HasSuffix(input, "{") && !strings.HasSuffix(input, ",") {
+	// Check for struct initialization
+	if strings.Contains(input, "struct{") || strings.Contains(input, "struct {") {
+		return openBraces == closeBraces
+	}
+
+	// Handle multi-line slice/array literals
+	if strings.Contains(input, "[") {
+		lines := strings.Split(input, "\n")
+		lastLine := strings.TrimSpace(lines[len(lines)-1])
+		if !strings.HasSuffix(lastLine, ",") && !strings.HasSuffix(lastLine, "]") {
+			return false
+		}
+	}
+
+	// If it's a simple expression or statement
+	if openBraces == 0 && openParens == closeParens &&
+		!strings.HasSuffix(input, "{") && !strings.HasSuffix(input, ",") {
 		return true
 	}
 
-	// Check if all blocks are closed
-	return openBraces > 0 && openBraces == closeBraces
+	return openBraces == closeBraces && openParens == closeParens
 }
 
 // eval evaluates the given Go code input.
@@ -146,85 +160,6 @@ func (r *REPL) eval(input string) {
 func (r *REPL) wrapCode(input string) string {
 	trimmedInput := strings.TrimSpace(input)
 
-	// Handle function declarations
-	if strings.HasPrefix(trimmedInput, "func ") {
-		r.functions = append(r.functions, input)
-		return fmt.Sprintf(`package main
-
-%s
-
-%s
-
-%s
-
-func main() {
-	fmt.Println("Function defined successfully")
-}`, strings.Join(r.types, "\n\n"),
-			strings.Join(r.vars, "\n"),
-			strings.Join(r.functions, "\n\n"))
-	}
-
-	// Handle map variable declarations
-	if strings.HasPrefix(trimmedInput, "var ") && strings.Contains(trimmedInput, "map[") {
-		r.vars = append(r.vars, input)
-		varName := strings.Split(strings.Split(input, " ")[1], "=")[0]
-		return fmt.Sprintf(`package main
-
-import "fmt"
-
-%s
-
-%s
-
-func main() {
-	%s = make(%s)
-	fmt.Printf("Variable declared and initialized: %%v\n", %s)
-}`, strings.Join(r.types, "\n\n"),
-			strings.Join(r.vars, "\n"),
-			varName,
-			strings.Split(input, " ")[2],
-			varName)
-	}
-
-	// Handle assignments (including map assignments)
-	if strings.Contains(trimmedInput, "=") && !strings.Contains(trimmedInput, ":=") && !strings.HasPrefix(trimmedInput, "var ") {
-		return fmt.Sprintf(`package main
-
-%s
-
-%s
-
-%s
-
-func main() {
-	%s
-}`, strings.Join(r.types, "\n\n"),
-			strings.Join(r.vars, "\n"),
-			strings.Join(r.functions, "\n\n"),
-			input)
-	}
-
-	// Handle function calls
-	if strings.Contains(trimmedInput, "()") {
-		return fmt.Sprintf(`package main
-
-import "fmt"
-
-%s
-
-%s
-
-%s
-
-func main() {
-	%s
-}
-`, strings.Join(r.types, "\n\n"),
-			strings.Join(r.vars, "\n"),
-			strings.Join(r.functions, "\n\n"),
-			input)
-	}
-
 	// Handle type declarations
 	if strings.HasPrefix(trimmedInput, "type ") {
 		r.types = append(r.types, input)
@@ -235,20 +170,15 @@ import "fmt"
 %s
 
 func main() {
-	fmt.Println("Type defined successfully")
-}
-`, input)
+    fmt.Println("Type defined successfully")
+}`, strings.Join(r.types, "\n"))
 	}
 
-	// Handle variable declarations
-	if strings.Contains(input, ":=") || strings.HasPrefix(trimmedInput, "var ") {
-		// Determine if it's a package-level or function-level declaration
-		isPackageLevel := strings.HasPrefix(trimmedInput, "var ")
-		r.vars = append(r.vars, input)
-
-		if isPackageLevel {
-			// For package-level declarations (var x type)
-			return fmt.Sprintf(`package main
+	// Handle package-level variable declarations
+	if strings.HasPrefix(trimmedInput, "var ") {
+		r.pkgVars = append(r.pkgVars, input)
+		varName := strings.Split(strings.Split(input, " ")[1], "=")[0]
+		return fmt.Sprintf(`package main
 
 import "fmt"
 
@@ -257,14 +187,16 @@ import "fmt"
 %s
 
 func main() {
-	fmt.Printf("Variable declared: %%v\n", %s)
-}
-`, strings.Join(r.types, "\n\n"),
-				strings.Join(r.vars, "\n"),
-				strings.Split(strings.Split(input, " ")[1], "=")[0]) // Extract var name
-		} else {
-			// For function-level declarations (:=)
-			return fmt.Sprintf(`package main
+    fmt.Printf("Variable declared: %%v\n", %s)
+}`, strings.Join(r.types, "\n"),
+			strings.Join(r.pkgVars, "\n"),
+			varName)
+	}
+
+	// Handle function declarations
+	if strings.HasPrefix(trimmedInput, "func ") && !strings.HasPrefix(trimmedInput, "func main") {
+		r.functions = append(r.functions, input)
+		return fmt.Sprintf(`package main
 
 import "fmt"
 
@@ -272,31 +204,40 @@ import "fmt"
 
 %s
 
+%s
+
 func main() {
-	%s
-	fmt.Printf("Variable declared: %%v\n", %s)
-}
-`, strings.Join(r.types, "\n\n"),
-				strings.Join(r.vars[:len(r.vars)-1], "\n"),
-				input,
-				strings.Split(input, ":=")[0])
-		}
+    fmt.Println("Function defined successfully")
+}`, strings.Join(r.types, "\n"),
+			strings.Join(r.pkgVars, "\n"),
+			strings.Join(r.functions, "\n"))
 	}
 
-	// If not a type or variable declaration treat it as regular code
-	declarations := strings.Join(r.types, "\n\n")
-	packageVars := []string{}
-	localVars := []string{}
+	// Handle := declarations (local variables)
+	if strings.Contains(trimmedInput, ":=") {
+		r.localVars = append(r.localVars, input)
+		varName := strings.Split(input, ":=")[0]
+		return fmt.Sprintf(`package main
 
-	// Separate package-level and function-level variables
-	for _, v := range r.vars {
-		if strings.HasPrefix(strings.TrimSpace(v), "var ") {
-			packageVars = append(packageVars, v)
-		} else {
-			localVars = append(localVars, v)
-		}
+import "fmt"
+
+%s
+
+%s
+
+%s
+
+func main() {
+    %s
+    fmt.Printf("Variable declared: %%v\n", %s)
+}`, strings.Join(r.types, "\n"),
+			strings.Join(r.pkgVars, "\n"),
+			strings.Join(r.functions, "\n"),
+			strings.Join(r.localVars, "\n    "),
+			strings.TrimSpace(varName))
 	}
 
+	// Handle function calls and expressions
 	return fmt.Sprintf(`package main
 
 import "fmt"
@@ -308,14 +249,24 @@ import "fmt"
 %s
 
 func main() {
-	%s
-	%s
-}
-`, declarations,
-		strings.Join(packageVars, "\n"),
-		strings.Join(r.functions, "\n\n"),
-		strings.Join(localVars, "\n\t"),
+    %s
+    %s
+}`, strings.Join(r.types, "\n"),
+		strings.Join(r.pkgVars, "\n"),
+		strings.Join(r.functions, "\n"),
+		strings.Join(r.localVars, "\n    "),
 		input)
+}
+
+// Helper method to get local variable declarations
+func (r *REPL) getLocalVars() []string {
+	localVars := []string{}
+	for _, v := range r.localVars {
+		if !strings.HasPrefix(strings.TrimSpace(v), "var ") {
+			localVars = append(localVars, v)
+		}
+	}
+	return localVars
 }
 
 // main is the entry point of the program.
