@@ -13,6 +13,7 @@ type REPL struct {
 	scanner   *bufio.Scanner
 	buffer    []string
 	functions []string // Store function declarations
+	types     []string // Store type declarations
 }
 
 func NewREPL() *REPL {
@@ -20,6 +21,7 @@ func NewREPL() *REPL {
 		scanner:   bufio.NewScanner(os.Stdin),
 		buffer:    make([]string, 0),
 		functions: make([]string, 0),
+		types:     make([]string, 0),
 	}
 }
 
@@ -113,8 +115,25 @@ func (r *REPL) eval(input string) {
 }
 
 func (r *REPL) wrapCode(input string) string {
-	// Detect if input is a function declaration
-	if strings.HasPrefix(strings.TrimSpace(input), "func ") {
+	trimmedInput := strings.TrimSpace(input)
+	
+	// Handle type declarations
+	if strings.HasPrefix(trimmedInput, "type ") {
+		r.types = append(r.types, input)
+		return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+func main() {
+	fmt.Println("Type defined successfully")
+}
+`, input)
+	}
+
+	// Handle function declarations
+	if strings.HasPrefix(trimmedInput, "func ") {
 		r.functions = append(r.functions, input)
 		return fmt.Sprintf(`package main
 
@@ -123,7 +142,6 @@ import "fmt"
 %s
 
 func main() {
-	// Function declared
 	fmt.Println("Function defined successfully")
 }
 `, input)
@@ -135,7 +153,6 @@ func main() {
 	}
 
 	// Only wrap in fmt.Println if it's a pure expression, not a statement
-	trimmedInput := strings.TrimSpace(input)
 	isStatement := strings.HasSuffix(trimmedInput, ")") || // function call
 		strings.Contains(trimmedInput, "=") || // assignment
 		strings.HasPrefix(trimmedInput, "for") || // control structures
@@ -166,9 +183,9 @@ func main() {
 		importStmt += ")"
 	}
 
-	// Include all previously defined functions
-	funcs := strings.Join(r.functions, "\n\n")
-
+	// Include all previously defined types and functions
+	declarations := strings.Join(append(r.types, r.functions...), "\n\n")
+	
 	return fmt.Sprintf(`package main
 
 %s
@@ -178,7 +195,7 @@ func main() {
 func main() {
 	%s
 }
-`, importStmt, funcs, input)
+`, importStmt, declarations, input)
 }
 
 func main() {
