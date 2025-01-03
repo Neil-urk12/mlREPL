@@ -3,7 +3,12 @@ echo $'\n'
 
 while true; do
     echo " -------------------------------------------"
+    echo "|           Neik's Crunk Shell              |"
+    echo "|                                           |"
     echo "|    1. Python    2. Go    3. JavaScript    |"
+    echo "|                                           |"
+    echo "|           4. Rust    5. Exit              |"
+    echo "|                                           |"
     echo " -------------------------------------------"
     echo $'\n'"Select a language: "
 
