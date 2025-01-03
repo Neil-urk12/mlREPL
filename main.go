@@ -14,6 +14,7 @@ type REPL struct {
 	buffer    []string
 	functions []string // Store function declarations
 	types     []string // Store type declarations
+	vars      []string // Store variable declarations
 }
 
 func NewREPL() *REPL {
@@ -22,6 +23,7 @@ func NewREPL() *REPL {
 		buffer:    make([]string, 0),
 		functions: make([]string, 0),
 		types:     make([]string, 0),
+		vars:      make([]string, 0),
 	}
 }
 
@@ -132,61 +134,33 @@ func main() {
 `, input)
 	}
 
-	// Handle function declarations
-	if strings.HasPrefix(trimmedInput, "func ") {
-		r.functions = append(r.functions, input)
-		return fmt.Sprintf(`package main
+	// Handle variable declarations
+	if strings.Contains(input, ":=") || strings.HasPrefix(trimmedInput, "var ") {
+		// Determine if it's a package-level or function-level declaration
+		isPackageLevel := strings.HasPrefix(trimmedInput, "var ")
+		r.vars = append(r.vars, input)
+
+		if isPackageLevel {
+			// For package-level declarations (var x type)
+			return fmt.Sprintf(`package main
 
 import "fmt"
 
 %s
 
+%s
+
 func main() {
-	fmt.Println("Function defined successfully")
+	fmt.Printf("Variable declared: %%v\n", %s)
 }
-`, input)
-	}
+`, strings.Join(r.types, "\n\n"),
+   strings.Join(r.vars, "\n"),
+   strings.Split(strings.Split(input, " ")[1], "=")[0]) // Extract var name
+		} else {
+			// For function-level declarations (:=)
+			return fmt.Sprintf(`package main
 
-	// Handle print statements
-	if strings.HasPrefix(input, "print(") {
-		input = fmt.Sprintf("fmt.%s", strings.Replace(input, "print", "Println", 1))
-	}
-
-	// Only wrap in fmt.Println if it's a pure expression, not a statement
-	isStatement := strings.HasSuffix(trimmedInput, ")") || // function call
-		strings.Contains(trimmedInput, "=") || // assignment
-		strings.HasPrefix(trimmedInput, "for") || // control structures
-		strings.HasPrefix(trimmedInput, "if") ||
-		strings.HasPrefix(trimmedInput, "fmt.") // already has print
-
-	if !isStatement {
-		input = fmt.Sprintf("fmt.Println(%s)", input)
-	}
-
-	// Collect imports
-	imports := []string{"fmt"}
-	if strings.Contains(input, "strings.") {
-		imports = append(imports, "strings")
-	}
-	if strings.Contains(input, "math.") {
-		imports = append(imports, "math")
-	}
-
-	importStmt := ""
-	if len(imports) == 1 {
-		importStmt = fmt.Sprintf("import \"%s\"", imports[0])
-	} else if len(imports) > 1 {
-		importStmt = "import (\n"
-		for _, imp := range imports {
-			importStmt += fmt.Sprintf("\t\"%s\"\n", imp)
-		}
-		importStmt += ")"
-	}
-
-	// Include all previously defined types and functions
-	declarations := strings.Join(append(r.types, r.functions...), "\n\n")
-	
-	return fmt.Sprintf(`package main
+import "fmt"
 
 %s
 
@@ -194,8 +168,45 @@ func main() {
 
 func main() {
 	%s
+	fmt.Printf("Variable declared: %%v\n", %s)
 }
-`, importStmt, declarations, input)
+`, strings.Join(r.types, "\n\n"),
+   strings.Join(r.vars[:len(r.vars)-1], "\n"),
+   input,
+   strings.Split(input, ":=")[0])
+		}
+	}
+
+	// Rest of the function remains the same
+	declarations := strings.Join(r.types, "\n\n")
+	packageVars := []string{}
+	localVars := []string{}
+
+	// Separate package-level and function-level variables
+	for _, v := range r.vars {
+		if strings.HasPrefix(strings.TrimSpace(v), "var ") {
+			packageVars = append(packageVars, v)
+		} else {
+			localVars = append(localVars, v)
+		}
+	}
+
+	return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+%s
+
+func main() {
+	%s
+	%s
+}
+`, declarations, 
+   strings.Join(packageVars, "\n"),
+   strings.Join(localVars, "\n\t"),
+   input)
 }
 
 func main() {
