@@ -85,6 +85,16 @@ func isCompleteInput(input string) bool {
 	// Check for complete blocks
 	openBraces := strings.Count(input, "{")
 	closeBraces := strings.Count(input, "}")
+	
+	// Check for incomplete struct literals
+	lines := strings.Split(input, "\n")
+	lastLine := strings.TrimSpace(lines[len(lines)-1])
+	
+	// If last line doesn't have a comma and we're in a struct literal
+	if openBraces > closeBraces && !strings.HasSuffix(lastLine, ",") && 
+	   !strings.HasSuffix(lastLine, "{") && lastLine != "" {
+		return false
+	}
 
 	// If it's a simple expression or statement without braces
 	if openBraces == 0 && !strings.HasSuffix(input, "{") && !strings.HasSuffix(input, ",") {
@@ -141,8 +151,6 @@ func (r *REPL) wrapCode(input string) string {
 		r.functions = append(r.functions, input)
 		return fmt.Sprintf(`package main
 
-import "fmt"
-
 %s
 
 %s
@@ -151,10 +159,49 @@ import "fmt"
 
 func main() {
 	fmt.Println("Function defined successfully")
-}
-`, strings.Join(r.types, "\n\n"),
+}`, strings.Join(r.types, "\n\n"),
 			strings.Join(r.vars, "\n"),
 			strings.Join(r.functions, "\n\n"))
+	}
+
+	// Handle map variable declarations
+	if strings.HasPrefix(trimmedInput, "var ") && strings.Contains(trimmedInput, "map[") {
+		r.vars = append(r.vars, input)
+		varName := strings.Split(strings.Split(input, " ")[1], "=")[0]
+		return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+%s
+
+func main() {
+	%s = make(%s)
+	fmt.Printf("Variable declared and initialized: %%v\n", %s)
+}`, strings.Join(r.types, "\n\n"),
+			strings.Join(r.vars, "\n"),
+			varName,
+			strings.Split(input, " ")[2],
+			varName)
+	}
+
+	// Handle assignments (including map assignments)
+	if strings.Contains(trimmedInput, "=") && !strings.Contains(trimmedInput, ":=") && !strings.HasPrefix(trimmedInput, "var ") {
+		return fmt.Sprintf(`package main
+
+%s
+
+%s
+
+%s
+
+func main() {
+	%s
+}`, strings.Join(r.types, "\n\n"),
+			strings.Join(r.vars, "\n"),
+			strings.Join(r.functions, "\n\n"),
+			input)
 	}
 
 	// Handle function calls
