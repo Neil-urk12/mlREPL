@@ -11,14 +11,15 @@ while true; do
     echo "|                                           |"
     echo " -------------------------------------------"
     echo $'\n'"Select a language: "
-
+    echo ""
     read -p "Enter your choice : " choice
-
+    echo ""
 
     case $choice in
         1)
-            read -p "Enter Python code: " code
-            python -c "$code" 2>/dev/null || echo "Error: Invalid Python code"
+            echo "Booting up Python... (Ctrl + D to exit or type exit)"
+            echo ""
+            exec python3
             ;;
         2)
             read -p "Enter Go code: " code
