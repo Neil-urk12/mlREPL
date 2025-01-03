@@ -12,7 +12,7 @@ import (
 type REPL struct {
 	scanner   *bufio.Scanner
 	buffer    []string
-	functions []string  // Store function declarations
+	functions []string // Store function declarations
 }
 
 func NewREPL() *REPL {
@@ -131,12 +131,15 @@ func main() {
 		input = fmt.Sprintf("fmt.%s", strings.Replace(input, "print", "Println", 1))
 	}
 
-	// If the input is a simple expression, wrap it in a print statement
-	if !strings.Contains(input, ";") &&
-		!strings.Contains(input, "func") &&
-		!strings.Contains(input, "for") &&
-		!strings.Contains(input, "if") &&
-		!strings.Contains(input, "fmt.") {
+	// Only wrap in fmt.Println if it's a pure expression, not a statement
+	trimmedInput := strings.TrimSpace(input)
+	isStatement := strings.HasSuffix(trimmedInput, ")") || // function call
+		strings.Contains(trimmedInput, "=") || // assignment
+		strings.HasPrefix(trimmedInput, "for") || // control structures
+		strings.HasPrefix(trimmedInput, "if") ||
+		strings.HasPrefix(trimmedInput, "fmt.") // already has print
+
+	if !isStatement {
 		input = fmt.Sprintf("fmt.Println(%s)", input)
 	}
 
@@ -162,7 +165,7 @@ func main() {
 
 	// Include all previously defined functions
 	funcs := strings.Join(r.functions, "\n\n")
-	
+
 	return fmt.Sprintf(`package main
 
 %s
