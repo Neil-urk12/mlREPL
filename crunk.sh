@@ -41,6 +41,10 @@ while true; do
             node "$temp_file" 2>/dev/null || echo "Error: Invalid JavaScript code"
             rm "$temp_file" temp 2>/dev/null
             ;;
+        5)
+            echo "Exiting..."
+            break
+            ;;
         *)
             echo "Invalid choice"
             ;;
