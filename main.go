@@ -25,6 +25,8 @@ func NewREPL() *REPL {
 
 func (r *REPL) Run() {
 	fmt.Println("Go REPL (Press Shift+Enter for new line, Ctrl+D or 'exit' to quit)")
+	fmt.Println("")
+
 	for {
 		if len(r.buffer) == 0 {
 			fmt.Print("go> ")
@@ -44,6 +46,7 @@ func (r *REPL) Run() {
 
 		input := r.scanner.Text()
 		if input == "exit" && len(r.buffer) == 0 {
+			fmt.Println("\nGoodbye!")
 			break
 		}
 
@@ -179,7 +182,11 @@ func main() {
 }
 
 func main() {
-	fmt.Println("Golang Interactive Code Environment")
+	fmt.Println("")
+	fmt.Println(" ---------------------------------------")
+	fmt.Println("|==Golang Interactive Code Environment==|")
+	fmt.Println(" ---------------------------------------")
+	fmt.Println("")
 	repl := NewREPL()
 	repl.Run()
 }
