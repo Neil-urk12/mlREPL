@@ -1,3 +1,6 @@
+// Package main implements a simple REPL (Read-Eval-Print Loop) for Go.
+// It allows users to enter Go code snippets, which are then executed,
+// and the output is printed to the console.
 package main
 
 import (
@@ -9,14 +12,16 @@ import (
 	"strings"
 )
 
+// REPL represents the REPL environment.
 type REPL struct {
-	scanner   *bufio.Scanner
-	buffer    []string
-	functions []string // Store function declarations
-	types     []string // Store type declarations
-	vars      []string // Store variable declarations
+	scanner   *bufio.Scanner // Scanner for reading user input.
+	buffer    []string      // Buffer to store multi-line input.
+	functions []string      // Store function declarations.
+	types     []string      // Store type declarations.
+	vars      []string      // Store variable declarations.
 }
 
+// NewREPL creates and initializes a new REPL instance.
 func NewREPL() *REPL {
 	return &REPL{
 		scanner:   bufio.NewScanner(os.Stdin),
@@ -27,6 +32,7 @@ func NewREPL() *REPL {
 	}
 }
 
+// Run starts the REPL, continuously reading, evaluating, and printing input.
 func (r *REPL) Run() {
 	fmt.Println("Go REPL (Press Shift+Enter for new line, Ctrl+D or 'exit' to quit)")
 	fmt.Println("")
@@ -66,7 +72,10 @@ func (r *REPL) Run() {
 	}
 }
 
-// isCompleteInput checks if the input code block is complete
+// isCompleteInput checks if the input code block is complete.
+// It does this by checking if the number of opening braces '{' matches
+// the number of closing braces '}'. It also handles cases where the input
+// is a simple expression or statement without braces.
 func isCompleteInput(input string) bool {
 	input = strings.TrimSpace(input)
 	if input == "" {
@@ -86,6 +95,10 @@ func isCompleteInput(input string) bool {
 	return openBraces > 0 && openBraces == closeBraces
 }
 
+// eval evaluates the given Go code input.
+// It creates a temporary directory, writes the code to a temporary file,
+// and then executes the file using the 'go run' command.
+// The output of the execution is then printed to the console.
 func (r *REPL) eval(input string) {
 	// Create a temporary directory for our code
 	tmpDir, err := os.MkdirTemp("", "gorepl")
@@ -116,9 +129,13 @@ func (r *REPL) eval(input string) {
 	fmt.Print(string(output))
 }
 
+// wrapCode wraps the user input into a valid Go program.
+// It handles type and variable declarations, and it separates
+// package-level and function-level variables.
+// The resulting program is then returned as a string.
 func (r *REPL) wrapCode(input string) string {
 	trimmedInput := strings.TrimSpace(input)
-	
+
 	// Handle type declarations
 	if strings.HasPrefix(trimmedInput, "type ") {
 		r.types = append(r.types, input)
@@ -154,8 +171,8 @@ func main() {
 	fmt.Printf("Variable declared: %%v\n", %s)
 }
 `, strings.Join(r.types, "\n\n"),
-   strings.Join(r.vars, "\n"),
-   strings.Split(strings.Split(input, " ")[1], "=")[0]) // Extract var name
+				strings.Join(r.vars, "\n"),
+				strings.Split(strings.Split(input, " ")[1], "=")[0]) // Extract var name
 		} else {
 			// For function-level declarations (:=)
 			return fmt.Sprintf(`package main
@@ -171,13 +188,13 @@ func main() {
 	fmt.Printf("Variable declared: %%v\n", %s)
 }
 `, strings.Join(r.types, "\n\n"),
-   strings.Join(r.vars[:len(r.vars)-1], "\n"),
-   input,
-   strings.Split(input, ":=")[0])
+				strings.Join(r.vars[:len(r.vars)-1], "\n"),
+				input,
+				strings.Split(input, ":=")[0])
 		}
 	}
 
-	// Rest of the function remains the same
+	// If not a type or variable declaration, treat it as regular code
 	declarations := strings.Join(r.types, "\n\n")
 	packageVars := []string{}
 	localVars := []string{}
@@ -203,12 +220,13 @@ func main() {
 	%s
 	%s
 }
-`, declarations, 
-   strings.Join(packageVars, "\n"),
-   strings.Join(localVars, "\n\t"),
-   input)
+`, declarations,
+		strings.Join(packageVars, "\n"),
+		strings.Join(localVars, "\n\t"),
+		input)
 }
 
+// main is the entry point of the program.
 func main() {
 	fmt.Println("")
 	fmt.Println(" ---------------------------------------")
