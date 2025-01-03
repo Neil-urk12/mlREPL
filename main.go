@@ -10,14 +10,16 @@ import (
 )
 
 type REPL struct {
-	scanner *bufio.Scanner
-	buffer  []string
+	scanner   *bufio.Scanner
+	buffer    []string
+	functions []string  // Store function declarations
 }
 
 func NewREPL() *REPL {
 	return &REPL{
-		scanner: bufio.NewScanner(os.Stdin),
-		buffer:  make([]string, 0),
+		scanner:   bufio.NewScanner(os.Stdin),
+		buffer:    make([]string, 0),
+		functions: make([]string, 0),
 	}
 }
 
@@ -87,7 +89,7 @@ func (r *REPL) eval(input string) {
 	defer os.RemoveAll(tmpDir)
 
 	// Wrap the input in a proper Go program
-	program := wrapCode(input)
+	program := r.wrapCode(input)
 
 	// Write to a temporary file
 	tmpFile := filepath.Join(tmpDir, "main.go")
@@ -107,7 +109,23 @@ func (r *REPL) eval(input string) {
 	fmt.Print(string(output))
 }
 
-func wrapCode(input string) string {
+func (r *REPL) wrapCode(input string) string {
+	// Detect if input is a function declaration
+	if strings.HasPrefix(strings.TrimSpace(input), "func ") {
+		r.functions = append(r.functions, input)
+		return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+func main() {
+	// Function declared
+	fmt.Println("Function defined successfully")
+}
+`, input)
+	}
+
 	// Handle print statements
 	if strings.HasPrefix(input, "print(") {
 		input = fmt.Sprintf("fmt.%s", strings.Replace(input, "print", "Println", 1))
@@ -122,7 +140,7 @@ func wrapCode(input string) string {
 		input = fmt.Sprintf("fmt.Println(%s)", input)
 	}
 
-	// Only include required imports
+	// Collect imports
 	imports := []string{"fmt"}
 	if strings.Contains(input, "strings.") {
 		imports = append(imports, "strings")
@@ -142,14 +160,19 @@ func wrapCode(input string) string {
 		importStmt += ")"
 	}
 
+	// Include all previously defined functions
+	funcs := strings.Join(r.functions, "\n\n")
+	
 	return fmt.Sprintf(`package main
+
+%s
 
 %s
 
 func main() {
 	%s
 }
-`, importStmt, input)
+`, importStmt, funcs, input)
 }
 
 func main() {
