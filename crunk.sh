@@ -1,4 +1,4 @@
-#!code runner
+#!/bin/bash
 echo $'\n'
 
 while true; do
