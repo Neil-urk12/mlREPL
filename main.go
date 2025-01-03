@@ -87,7 +87,7 @@ func isCompleteInput(input string) bool {
 	closeBraces := strings.Count(input, "}")
 
 	// If it's a simple expression or statement without braces
-	if openBraces == 0 && !strings.HasSuffix(input, "{") && !strings.HasSuffix(input, "") {
+	if openBraces == 0 && !strings.HasSuffix(input, "{") && !strings.HasSuffix(input, ",") {
 		return true
 	}
 
@@ -135,6 +135,48 @@ func (r *REPL) eval(input string) {
 // The resulting program is then returned as a string.
 func (r *REPL) wrapCode(input string) string {
 	trimmedInput := strings.TrimSpace(input)
+
+	// Handle function declarations
+	if strings.HasPrefix(trimmedInput, "func ") {
+		r.functions = append(r.functions, input)
+		return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+%s
+
+%s
+
+func main() {
+	fmt.Println("Function defined successfully")
+}
+`, strings.Join(r.types, "\n\n"),
+			strings.Join(r.vars, "\n"),
+			strings.Join(r.functions, "\n\n"))
+	}
+
+	// Handle function calls
+	if strings.Contains(trimmedInput, "()") {
+		return fmt.Sprintf(`package main
+
+import "fmt"
+
+%s
+
+%s
+
+%s
+
+func main() {
+	%s
+}
+`, strings.Join(r.types, "\n\n"),
+			strings.Join(r.vars, "\n"),
+			strings.Join(r.functions, "\n\n"),
+			input)
+	}
 
 	// Handle type declarations
 	if strings.HasPrefix(trimmedInput, "type ") {
@@ -216,12 +258,15 @@ import "fmt"
 
 %s
 
+%s
+
 func main() {
 	%s
 	%s
 }
 `, declarations,
 		strings.Join(packageVars, "\n"),
+		strings.Join(r.functions, "\n\n"),
 		strings.Join(localVars, "\n\t"),
 		input)
 }
