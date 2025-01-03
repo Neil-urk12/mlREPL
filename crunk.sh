@@ -39,7 +39,7 @@ while true; do
             exec node
             ;;
         5)
-            echo "Exiting...\nCiao!"
+            echo "Exiting..."$'\n'"Ciao!"
             break
             ;;
         *)
