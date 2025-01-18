@@ -27,16 +27,14 @@ while true; do
             exec gore
             ;;
         3)
-            read -p "Enter Rust code: " code
-            temp_file="temp_$$.rs"
-            echo "$code" > "$temp_file"
-            rustc "$temp_file" && ./temp 2>/dev/null || echo "Error: Invalid Rust code"
-            rm "$temp_file" temp 2>/dev/null
-            ;;
-        4)
             echo "I'm gonna JavaScript on your back! (Ctrl + D to exit or type exit)"
             echo ""
             exec node
+            ;;
+        4)
+            echo "Rust is the best! (Ctrl + D to exit or type exit)"
+            echo ""
+            exec evcxr
             ;;
         5)
             echo "Exiting..."$'\n'"Ciao!"
