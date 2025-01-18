@@ -1,4 +1,5 @@
 #!/bin/bash
+clear
 echo $'\n'
 
 while true; do
@@ -37,7 +38,9 @@ while true; do
             exec evcxr
             ;;
         5)
-            echo "Exiting..."$'\n'"Ciao!"
+
+            echo "Exiting..."
+            echo "Ciao!"
             break
             ;;
         *)
