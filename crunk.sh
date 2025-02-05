@@ -1,5 +1,7 @@
 #!/bin/bash
 clear
+./checker.sh
+clear
 echo $'\n'
 
 while true; do
