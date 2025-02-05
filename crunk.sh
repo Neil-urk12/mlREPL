@@ -1,52 +1,115 @@
 #!/bin/bash
 clear
 ./checker.sh
-clear
-echo $'\n'
+
+# Read installed languages from temp file
+temp_file="/tmp/installed_langs.txt"
+declare -A langs
+while IFS='=' read -r lang status; do
+    langs["$lang"]=$status
+done < "$temp_file"
 
 while true; do
+    # Count installed languages to help with menu formatting
+    installed_count=0
+    for lang in "${!langs[@]}"; do
+        if [ "${langs[$lang]}" == "1" ]; then
+            ((installed_count++))
+        fi
+    done
+
+    # Calculate padding for centered text
+    padding=$((25))
+    echo
+    echo " $(printf '%*s' $padding "")"
     echo " -------------------------------------------"
     echo "|           Neik's Crunk Shell              |"
     echo "|                                           |"
-    echo "|    1. Python    2. Go    3. JavaScript    |"
+
+    # Initialize menu counter
+    counter=1
+    declare -A menu_items
+
+    # Display installed languages
+    if [ "${langs[python]}" == "1" ]; then
+        echo "|    $counter. Python                              |"
+        menu_items[$counter]="python"
+        ((counter++))
+    fi
+    if [ "${langs[go]}" == "1" ]; then
+        echo "|    $counter. Go                                  |"
+        menu_items[$counter]="go"
+        ((counter++))
+    fi
+    if [ "${langs[node]}" == "1" ]; then
+        echo "|    $counter. JavaScript                          |"
+        menu_items[$counter]="node"
+        ((counter++))
+    fi
+    if [ "${langs[rust]}" == "1" ]; then
+        echo "|    $counter. Rust                                |"
+        menu_items[$counter]="rust"
+        ((counter++))
+    fi
+
+    # Display Exit option
     echo "|                                           |"
-    echo "|           4. Rust    5. Exit              |"
+    echo "|    $counter. Exit                                |"
     echo "|                                           |"
     echo " -------------------------------------------"
-    echo $'\n'"Select a language: "
+    
+    # Display missing languages message
+    if [ $installed_count -lt 4 ]; then
+        echo -e "\nMissing languages:"
+        if [ "${langs[python]}" == "0" ]; then
+            echo "- Python"
+        fi
+        if [ "${langs[go]}" == "0" ]; then
+            echo "- Go"
+        fi
+        if [ "${langs[node]}" == "0" ]; then
+            echo "- JavaScript (Node.js)"
+        fi
+        if [ "${langs[rust]}" == "0" ]; then
+            echo "- Rust"
+        fi
+        echo -e "\nRun the script again to install missing languages."
+    fi
+
+    echo -e "\nSelect a language: "
     echo ""
     read -p "Enter your choice : " choice
     echo ""
 
-    case $choice in
-        1)
-            echo "Booting up Python... (Ctrl + D to exit or type exit)"
-            echo ""
-            exec python3
-            ;;
-        2)
-            echo "Booting up Go...HERE WE GO! (Ctrl + D to exit or type exit)"
-            echo ""
-            exec gore
-            ;;
-        3)
-            echo "I'm gonna JavaScript on your back! (Ctrl + D to exit or type exit)"
-            echo ""
-            exec node
-            ;;
-        4)
-            echo "Rust is the best! (Ctrl + D to exit or type exit)"
-            echo ""
-            exec evcxr
-            ;;
-        5)
-
-            echo "Exiting..."
-            echo "Ciao!"
-            break
-            ;;
-        *)
-            echo "Invalid choice"
-            ;;
-    esac
+    if [ "$choice" == "$counter" ]; then
+        echo "Exiting..."
+        echo "Ciao!"
+        break
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -gt 0 ] && [ "$choice" -lt "$counter" ]; then
+        selected=${menu_items[$choice]}
+        case $selected in
+            "python")
+                echo "Booting up Python... (Ctrl + D to exit or type exit)"
+                echo ""
+                exec python3
+                ;;
+            "go")
+                echo "Booting up Go...HERE WE GO! (Ctrl + D to exit or type exit)"
+                echo ""
+                exec gore
+                ;;
+            "node")
+                echo "I'm gonna JavaScript on your back! (Ctrl + D to exit or type exit)"
+                echo ""
+                exec node
+                ;;
+            "rust")
+                echo "Rust is the best! (Ctrl + D to exit or type exit)"
+                echo ""
+                exec evcxr
+                ;;
+        esac
+    else
+        echo "Invalid choice"
+    fi
 done

@@ -45,40 +45,42 @@ install_package() {
     esac
 }
 
-# Check all languages
-if command_exists rustc && command_exists node && command_exists java && command_exists go && command_exists python3; then
-    echo "All programming languages (Rust, Node.js, Java, Go, and Python) are already installed!"
+# Create a temporary file to store language status
+temp_file="/tmp/installed_langs.txt"
+> "$temp_file"
+
+# Check each language and store status
+if command_exists python3; then
+    echo "python=1" >> "$temp_file"
 else
-    # Check Rust
-    if ! command_exists rustc; then
-        echo "Rust is not installed"
-        install_package "Rust" "rust"
-    fi
-
-    # Check JavaScript (Node.js)
-    if ! command_exists node; then
-        echo "JavaScript (Node.js) is not installed"
-        install_package "Node.js" "nodejs"
-    fi
-
-    # Check Java
-    if ! command_exists java; then
-        echo "Java is not installed"
-        install_package "Java" "default-jdk"
-    fi
-
-    # Check Go
-    if ! command_exists go; then
-        echo "Go is not installed"
-        install_package "Go" "golang"
-    fi
-
-    # Check Python
-    if ! command_exists python3; then
-        echo "Python is not installed"
-        install_package "Python" "python3"
-    fi
+    echo "python=0" >> "$temp_file"
+    echo "Python is not installed"
+    install_package "Python" "python3"
 fi
 
-echo -e "\nPress any key to continue..."
+if command_exists go; then
+    echo "go=1" >> "$temp_file"
+else
+    echo "go=0" >> "$temp_file"
+    echo "Go is not installed"
+    install_package "Go" "golang"
+fi
+
+if command_exists node; then
+    echo "node=1" >> "$temp_file"
+else
+    echo "node=0" >> "$temp_file"
+    echo "JavaScript (Node.js) is not installed"
+    install_package "Node.js" "nodejs"
+fi
+
+if command_exists rustc; then
+    echo "rust=1" >> "$temp_file"
+else
+    echo "rust=0" >> "$temp_file"
+    echo "Rust is not installed"
+    install_package "Rust" "rust"
+fi
+
+echo -e "Language check complete..\nPress any key to continue..."
 read -n 1 -s -r
