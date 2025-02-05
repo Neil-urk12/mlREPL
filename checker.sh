@@ -82,5 +82,13 @@ else
     install_package "Rust" "rust"
 fi
 
+if command_exists java; then
+    echo "java=1" >> "$temp_file"
+else
+    echo "java=0" >> "$temp_file"
+    echo "Java is not installed"
+    install_package "Java" "java"
+fi
+
 echo -e "Language check complete..\nPress any key to continue..."
 read -n 1 -s -r

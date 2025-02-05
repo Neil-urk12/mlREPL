@@ -51,6 +51,11 @@ while true; do
         menu_items[$counter]="rust"
         ((counter++))
     fi
+    if [ "${langs[java]}" == "1" ]; then
+        echo "|    $counter. Java                                |"
+        menu_items[$counter]="java"
+        ((counter++))
+    fi
 
     # Display Exit option
     echo "|                                           |"
@@ -72,6 +77,9 @@ while true; do
         fi
         if [ "${langs[rust]}" == "0" ]; then
             echo "- Rust"
+        fi
+        if [ "${langs[java]}" == "0" ]; then
+            echo "- Java"
         fi
         echo -e "\nRun the script again to install missing languages."
     fi
@@ -105,6 +113,11 @@ while true; do
                 ;;
             "rust")
                 echo "Rust is the best! (Ctrl + D to exit or type exit)"
+                echo ""
+                exec evcxr
+                ;;
+            "java")
+                echo "Wooaahhh. Are we writing some legacy code? (Ctrl + D to exit or type exit)"
                 echo ""
                 exec evcxr
                 ;;
