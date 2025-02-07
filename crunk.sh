@@ -119,7 +119,7 @@ while true; do
             "java")
                 echo "Wooaahhh. Are we writing some legacy code? (Ctrl + D to exit or type exit)"
                 echo ""
-                exec evcxr
+                exec jshell
                 ;;
         esac
     else
